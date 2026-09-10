@@ -1,0 +1,266 @@
+[
+  {
+    "question": "What is the largest city in Karnataka?",
+    "expected_sentences": [
+      1
+    ],
+    "answerable": true,
+    "expected_answer": "Bengaluru"
+  },
+  {
+    "question": "What is Bengaluru also known as?",
+    "expected_sentences": [
+      1
+    ],
+    "answerable": true,
+    "expected_answer": "Bangalore"
+  },
+  {
+    "question": "When did Bengaluru officially replace Bangalore as the city's name?",
+    "expected_sentences": [
+      1
+    ],
+    "answerable": true,
+    "expected_answer": "1 November 2014"
+  },
+  {
+    "question": "What is the population of Bengaluru metropolitan area?",
+    "expected_sentences": [
+      3
+    ],
+    "answerable": true,
+    "expected_answer": "around 8.5 million"
+  },
+  {
+    "question": "How did Bengaluru rank among India's most populous cities according to the 2011 census?",
+    "expected_sentences": [
+      2
+    ],
+    "answerable": true,
+    "expected_answer": "Third most populous city in India"
+  },
+  {
+    "question": "What was the population rank of the Bengaluru metropolitan area among India's urban agglomerations?",
+    "expected_sentences": [
+      3
+    ],
+    "answerable": true,
+    "expected_answer": "Fifth most populous urban agglomeration in India"
+  },
+  {
+    "question": "What is the altitude of Bengaluru?",
+    "expected_sentences": [
+      4
+    ],
+    "answerable": true,
+    "expected_answer": "900 m (3,000 ft)"
+  },
+  {
+    "question": "Does Bengaluru have many trees?",
+    "expected_sentences": [],
+    "answerable": false,
+    "expected_answer": null
+  },
+  {
+    "question": "Where can I get the best biryani in Bengaluru?",
+    "expected_sentences": [],
+    "answerable": false,
+    "expected_answer": null
+  },
+  {
+    "question": "Who is the current Chief Minister of Karnataka?",
+    "expected_sentences": [],
+    "answerable": false,
+    "expected_answer": null
+  },
+  {
+    "question": "What is the average annual rainfall in Bengaluru?",
+    "expected_sentences": [],
+    "answerable": false,
+    "expected_answer": null
+  },
+  {
+    "question": "How many lakes are there in Bengaluru?",
+    "expected_sentences": [],
+    "answerable": false,
+    "expected_answer": null
+  },
+  {
+    "question": "Which IT companies have their headquarters in Bengaluru?",
+    "expected_sentences": [],
+    "answerable": false,
+    "expected_answer": null
+  },
+  {
+    "question": "What is the current population of Bengaluru in 2026?",
+    "expected_sentences": [],
+    "answerable": false,
+    "expected_answer": null
+  },
+  {
+    "question": "Which airport serves Bengaluru?",
+    "expected_sentences": [],
+    "answerable": false,
+    "expected_answer": null
+  },
+  {
+    "question": "What is the most popular food in Bengaluru?",
+    "expected_sentences": [],
+    "answerable": false,
+    "expected_answer": null
+  },
+  {
+    "question": "Who is the current mayor of Bengaluru?",
+    "expected_sentences": [],
+    "answerable": false,
+    "expected_answer": null
+  },
+  {
+    "question": "Who was Kempe Gowda I?",
+    "expected_sentences": [
+      10
+    ],
+    "answerable": true,
+    "expected_answer": "Feudal ruler under Vijayanagara empire"
+  },
+  {
+    "question": "When was the name 'Bengaluru' first used?",
+    "expected_sentences": [
+      7
+    ],
+    "answerable": true,
+    "expected_answer": "890 CE"
+  },
+  {
+    "question": "Which empire controlled the Bengaluru region after the Hoysala kingdom?",
+    "expected_sentences": [
+      9
+    ],
+    "answerable": true,
+    "expected_answer": "Vijayanagara Empire"
+  },
+  {
+    "question": "In what year did Kempe Gowda I establish the mud fort?",
+    "expected_sentences": [
+      10
+    ],
+    "answerable": true,
+    "expected_answer": "1537 CE"
+  },
+  {
+    "question": "What did Kempe Gowda I establish in 1537 CE?",
+    "expected_sentences": [
+      10
+    ],
+    "answerable": true,
+    "expected_answer": "A mud fort"
+  },
+  {
+    "question": "Which empire was Kempe Gowda I a feudal ruler under?",
+    "expected_sentences": [
+      10
+    ],
+    "answerable": true,
+    "expected_answer": "Vijayanagara Empire"
+  },
+  {
+    "question": "When did humans settle in the Bengaluru region?",
+    "expected_sentences": [
+      6
+    ],
+    "answerable": true,
+    "expected_answer": "4000 BCE"
+  },
+  {
+    "question": "What are the earlier established areas of Bengaluru called?",
+    "expected_sentences": [
+      10
+    ],
+    "answerable": true,
+    "expected_answer": "Petes"
+  },
+  {
+    "question": "Why is Bengaluru called the Garden City?",
+    "expected_sentences": [
+      5
+    ],
+    "answerable": true,
+    "expected_answer": "Because of its parks and greenery"
+  },
+  {
+    "question": "Where was the old Kannada inscription mentioning Bengaluru discovered?",
+    "expected_sentences": [
+      7
+    ],
+    "answerable": true,
+    "expected_answer": "At the Nageshwara Temple in Begur"
+  },
+  {
+    "question": "What type of historical inscription contains the first mention of Bengaluru?",
+    "expected_sentences": [
+      7
+    ],
+    "answerable": true,
+    "expected_answer": "An old Kannada stone inscription"
+  },
+  {
+    "question": "Which dynasty ruled the Bengaluru region from 350 CE?",
+    "expected_sentences": [
+      8
+    ],
+    "answerable": true,
+    "expected_answer": "Western Ganga dynasty"
+  },
+  {
+    "question": "Which empire did the Bengaluru region become part of in the early eleventh century CE?",
+    "expected_sentences": [
+      8
+    ],
+    "answerable": true,
+    "expected_answer": "Chola Empire"
+  },
+  {
+    "question": "Which kingdom ruled Bengaluru in the late Middle Ages?",
+    "expected_sentences": [
+      9
+    ],
+    "answerable": true,
+    "expected_answer": "Hoysala kingdom"
+  },
+  {
+    "question": "Which population figure belongs to Bengaluru itself, and which belongs to its metropolitan area?",
+    "expected_sentences": [
+      2,
+      3
+    ],
+    "answerable": true,
+    "expected_answer": "Bengaluru itself had 8.4 million people according to the 2011 census, while its metropolitan area had around 8.5 million."
+  },
+  {
+    "question": "How do the 890 CE reference to Bengaluru and Kempe Gowda I's 1537 CE contribution differ?",
+    "expected_sentences": [
+      10,
+      7
+    ],
+    "answerable": true,
+    "expected_answer": "The 890 CE reference is the first known mention of the name 'Bengaluru' in an old Kannada stone inscription, while Kempe Gowda I established a mud fort in 1537 CE, considered the foundation of the modern city."
+  },
+  {
+    "question": "What are the two different reasons Bengaluru is associated with the terms 'Bangalore' and 'Garden City'?",
+    "expected_sentences": [
+      1,
+      5
+    ],
+    "answerable": true,
+    "expected_answer": "Bangalore is another name for Bengaluru, while 'Garden City' refers to the city's parks and greenery."
+  },
+  {
+    "question": "How did the political control of the Bengaluru region progress from the Western Ganga dynasty to the Vijayanagara Empire?",
+    "expected_sentences": [
+      8,
+      9
+    ],
+    "answerable": true,
+    "expected_answer": "The Western Ganga dynasty ruled the region from 350 CE; it later became part of the Chola Empire, followed by the Hoysala kingdom and then the Vijayanagara Empire."
+  }
+]

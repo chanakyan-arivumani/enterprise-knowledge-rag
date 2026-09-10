@@ -1,0 +1,42 @@
+def chunk_by_sentences(
+    sentences: list[str], chunk_size: int, overlap: int
+) -> list[dict]:
+    """
+    [{"id": 1, "text": "Sentence one. Sentence two.", "sentence_ids": {1,2}]
+    """
+    chunk_id = 1
+    result = []
+
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be greater than 0")
+    if overlap:
+        if overlap < 0 or overlap >= chunk_size:
+            raise ValueError("overlap must be >= 0 and < chunk_size")
+
+        step = chunk_size - overlap
+        for idx in range(0, len(sentences), step):
+            chunk_sentences = sentences[idx : idx + chunk_size]
+            text = " ".join(chunk_sentences)
+            result.append(
+                {
+                    "id": chunk_id,
+                    "text": text,
+                    "sentence_ids": set(range(idx + 1, idx + len(chunk_sentences) + 1)),
+                    "embedding": generate_embeddings(text),
+                }
+            )
+            chunk_id += 1
+    else:
+        for idx in range(0, len(sentences)):
+            chunk_sentences = sentences[idx : idx + chunk_size]
+            text = " ".join(chunk_sentences)
+            result.append(
+                {
+                    "id": chunk_id,
+                    "text": text,
+                    "sentence_ids": set(range(idx + 1, idx + len(chunk_sentences) + 1)),
+                    "embedding": generate_embeddings(text),
+                }
+            )
+            chunk_id += 1
+    return result
