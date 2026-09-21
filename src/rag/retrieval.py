@@ -1,8 +1,8 @@
 import re
-import math
-import ollama
 from copy import copy
 from dataclasses import dataclass
+
+from rag.embeddings import generate_embeddings, get_cosine_similarity
 
 # from embeddings import bengaluru_text_list, bengaluru_eval_ds
 

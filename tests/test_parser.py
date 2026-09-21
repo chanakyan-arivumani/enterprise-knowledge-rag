@@ -6,10 +6,7 @@ from ingestion.parsers import (
     parse_pdf_file,
     parse_file,
 )
-from ingestion.identity import generate_document_id
-
-# Sets the source correctly
-# Sets the document type correctly
+from ingestion.identity import generate_document_id, generate_content_hash
 
 
 def test_parse_text_file(tmp_path):
@@ -33,7 +30,8 @@ def test_parse_text_file_normalizes_and_generates_id(tmp_path):
 
     expected_normalized_text = "Hello\nWorld!"
     assert document.text == expected_normalized_text
-    assert document.document_id == generate_document_id(expected_normalized_text)
+    assert document.document_id == generate_document_id(str(file_path))
+    assert document.content_hash == generate_content_hash(expected_normalized_text)
 
 
 def test_parse_markdown_file(tmp_path):
@@ -67,7 +65,8 @@ def test_parse_markdown_file_normalizes_and_generates_id(tmp_path):
     expected_normalized_text = """# Bengaluru
             **Bengaluru** is the capital of Karnataka."""
     assert document.text == expected_normalized_text
-    assert document.document_id == generate_document_id(expected_normalized_text)
+    assert document.document_id == generate_document_id(str(file_path))
+    assert document.content_hash == generate_content_hash(expected_normalized_text)
 
 
 def test_parse_pdf_file(tmp_path):
@@ -87,7 +86,8 @@ def test_parse_pdf_file(tmp_path):
     expected_text = "Text from page 1\n\nText from page 2"
 
     assert document.text == expected_text
-    assert document.document_id == generate_document_id(expected_text)
+    assert document.content_hash == generate_content_hash(expected_text)
+    assert document.document_id == generate_document_id(str(file_path))
     assert document.source == str(file_path)
     assert document.document_type == "pdf"
 

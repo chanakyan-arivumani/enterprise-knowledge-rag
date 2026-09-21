@@ -53,7 +53,7 @@ def chunk_document(
         overlap,
     )
 
-    chunks = []
+    chunks: list[Chunk] = []
 
     for chunk_index, raw_chunk in enumerate(raw_chunks):
         chunk = Chunk(
@@ -65,6 +65,7 @@ def chunk_document(
             document_id=document.document_id,
             text=raw_chunk["text"],
             metadata={
+                **document.metadata,
                 "source": document.source,
                 "document_type": document.document_type,
                 "chunk_index": chunk_index,

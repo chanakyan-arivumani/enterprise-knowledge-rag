@@ -101,19 +101,23 @@ def test_split_into_sentences_empty_text():
 def test_chunk_document():
     document = Document(
         document_id="doc-123",
+        content_hash="3224567",
         source="docs/test.txt",
         document_type="text",
         text="A. B. C. D.",
-        metadata={},
+        metadata={"category": "test"},
     )
     result = chunk_document(document=document, chunk_size=2, overlap=0)
-    assert result.__len__() == 2
-    assert type(result[0]) == Chunk
-    assert type(result[1]) == Chunk
+    assert len(result) == 2
+    assert all(isinstance(chunk, Chunk) for chunk in result)
     assert result[0].document_id == "doc-123"
     assert result[0].text == "A. B."
     assert result[0].metadata["chunk_index"] == 0
     assert result[0].metadata["sentence_ids"] == [1, 2]
+    assert result[0].metadata["category"] == "test"
+    assert result[1].text == "C. D."
+    assert result[1].metadata["chunk_index"] == 1
+    assert result[1].metadata["sentence_ids"] == [3, 4]
 
     assert result[0].chunk_id == generate_chunk_id(
         "doc-123",
@@ -125,6 +129,7 @@ def test_chunk_document():
 def test_chunk_document_determinism():
     document = Document(
         document_id="doc-123",
+        content_hash="76543456",
         source="docs/test.txt",
         document_type="text",
         text="A. B. C. D.",
@@ -133,5 +138,6 @@ def test_chunk_document_determinism():
     result_1 = chunk_document(document, chunk_size=2, overlap=0)
     result_2 = chunk_document(document, chunk_size=2, overlap=0)
 
-    assert result_1[0].chunk_id == result_2[0].chunk_id
-    assert result_1[1].chunk_id == result_2[1].chunk_id
+    assert [chunk.chunk_id for chunk in result_1] == [
+        chunk.chunk_id for chunk in result_2
+    ]
