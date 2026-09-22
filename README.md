@@ -146,6 +146,14 @@ Make sure Ollama is running before executing the RAG pipeline.
 pytest
 ```
 
+## To load environment variables
+
+```bash
+set -a
+source .env
+set +a
+```
+
 ## Status
 
 The current milestone is a working, tested RAG MVP.

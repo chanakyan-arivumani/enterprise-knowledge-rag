@@ -30,7 +30,7 @@ def test_ingest_file_with_temporary_text_file(tmp_path):
         assert chunk.metadata["source"] == str(file_path)
         assert chunk.metadata["path"] == str(file_path)
         assert chunk.metadata["document_type"] == "text"
-        assert chunk.metadata["chunk_index"] == index
+        assert chunk.chunk_index == index
 
 
 def test_ingest_file_with_temporary_pdf(tmp_path):

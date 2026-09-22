@@ -63,12 +63,12 @@ def chunk_document(
                 raw_chunk["text"],
             ),
             document_id=document.document_id,
+            chunk_index=chunk_index,
             text=raw_chunk["text"],
             metadata={
                 **document.metadata,
                 "source": document.source,
                 "document_type": document.document_type,
-                "chunk_index": chunk_index,
                 "sentence_ids": sorted(raw_chunk["sentence_ids"]),
             },
         )

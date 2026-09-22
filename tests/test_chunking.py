@@ -112,11 +112,11 @@ def test_chunk_document():
     assert all(isinstance(chunk, Chunk) for chunk in result)
     assert result[0].document_id == "doc-123"
     assert result[0].text == "A. B."
-    assert result[0].metadata["chunk_index"] == 0
+    assert result[0].chunk_index == 0
     assert result[0].metadata["sentence_ids"] == [1, 2]
     assert result[0].metadata["category"] == "test"
     assert result[1].text == "C. D."
-    assert result[1].metadata["chunk_index"] == 1
+    assert result[1].chunk_index == 1
     assert result[1].metadata["sentence_ids"] == [3, 4]
 
     assert result[0].chunk_id == generate_chunk_id(
