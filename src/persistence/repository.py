@@ -1,3 +1,5 @@
+import json
+import pytest
 import psycopg
 from psycopg.types.json import Jsonb
 from ingestion.models import Document, Chunk
@@ -97,7 +99,9 @@ def get_chunks(
             document_id, 
             chunk_index, 
             text, 
-            metadata
+            metadata,
+            embedding::text as embedding,
+            embedding_model
         FROM chunks
         WHERE document_id=%s
         ORDER BY chunk_index;
@@ -113,6 +117,8 @@ def get_chunks(
             chunk_index=row[2],
             text=row[3],
             metadata=row[4],
+            embedding=(json.loads(row[5]) if row[5] is not None else None),
+            embedding_model=row[6],
         )
         for row in rows
     ]
@@ -157,3 +163,59 @@ def delete_chunks(
     """
     with conn.cursor() as cursor:
         cursor.execute(query, (document_id,))
+
+
+def update_chunk_embedding(
+    conn: psycopg.Connection,
+    chunk_id: str,
+    embedding: list[float],
+    embedding_model: str,
+) -> None:
+    if len(embedding) != 1024:
+        raise ValueError("Embeddings must be 1024 in length")
+
+    if not embedding_model.strip():
+        raise ValueError("Embedding model cannot be empty")
+
+    query = """
+        UPDATE chunks
+        SET embedding = %s::vector,
+            embedding_model = %s
+        WHERE chunk_id = %s;
+    """
+    with conn.cursor() as cursor:
+        cursor.execute(
+            query,
+            (
+                str(embedding),
+                embedding_model,
+                chunk_id,
+            ),
+        )
+
+        if cursor.rowcount == 0:
+            raise ValueError(f"Chunk {chunk_id} not found")
+
+
+@pytest.mark.parametrize(
+    "embedding, embedding_model, expected_error",
+    [
+        ([0.1] * 1023, "qwen3-embedding:0.6b", "1024"),
+        ([0.1] * 1025, "qwen3-embedding:0.6b", "1024"),
+        ([0.1] * 1024, "", "model"),
+        ([0.1] * 1024, "   ", "model"),
+    ],
+)
+def test_update_chunk_embedding_invalid_input(
+    db_conn,
+    embedding,
+    embedding_model,
+    expected_error,
+):
+    with pytest.raises(ValueError, match=expected_error):
+        update_chunk_embedding(
+            db_conn,
+            chunk_id="unused-chunk",
+            embedding=embedding,
+            embedding_model=embedding_model,
+        )

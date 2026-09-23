@@ -17,3 +17,5 @@ class Chunk(BaseModel):
     chunk_index: int
     text: str
     metadata: dict[str, Any]
+    embedding: list[float] | None = None
+    embedding_model: str | None = None

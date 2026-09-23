@@ -10,6 +10,7 @@ from persistence.repository import (
     get_chunks,
     update_document,
     delete_chunks,
+    update_chunk_embedding,
 )
 from persistence.service import persist_document
 
@@ -379,3 +380,54 @@ def test_transaction_rollback_on_failure(db_conn):
         )
         == original_chunks
     )
+
+
+def test_update_chunk_embedding(db_conn):
+    document = Document(
+        document_id="doc-123",
+        source="/test/doc.txt",
+        document_type="text",
+        content_hash="hash-123",
+        text="A. B.",
+        metadata={"path": "/test/doc.txt"},
+    )
+
+    chunks = [
+        Chunk(
+            chunk_id="chunk-1",
+            document_id=document.document_id,
+            chunk_index=0,
+            text="A.",
+            metadata={"sentence_ids": [1]},
+        ),
+    ]
+
+    insert_document(db_conn, document)
+    insert_chunks(db_conn, chunks)
+
+    stored_chunks = get_chunks(db_conn, document.document_id)
+    assert stored_chunks[0].chunk_id == "chunk-1"
+    assert stored_chunks[0].document_id == document.document_id
+
+    embedding = [0.1] * 1024
+    update_chunk_embedding(
+        db_conn,
+        chunk_id="chunk-1",
+        embedding=embedding,
+        embedding_model="qwen3-embedding:0.6b",
+    )
+
+    updated_chunks = get_chunks(db_conn, document.document_id)
+    assert updated_chunks[0].chunk_id == "chunk-1"
+    assert updated_chunks[0].embedding == embedding
+    assert updated_chunks[0].embedding_model == "qwen3-embedding:0.6b"
+
+
+def test_update_chunk_embedding_missing_chunk(db_conn):
+    with pytest.raises(ValueError, match="Chunk nonexistent-chunk not found"):
+        update_chunk_embedding(
+            db_conn,
+            chunk_id="nonexistent-chunk",
+            embedding=[0.1] * 1024,
+            embedding_model="qwen3-embedding:0.6b",
+        )

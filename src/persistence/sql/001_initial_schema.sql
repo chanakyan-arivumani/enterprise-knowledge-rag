@@ -15,6 +15,14 @@ CREATE TABLE chunks (
     text TEXT NOT NULL,
     chunk_index INTEGER NOT NULL,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    embedding VECTOR(1024),
+    embedding_model TEXT,
 
-    UNIQUE (document_id, chunk_index)
+    UNIQUE (document_id, chunk_index),
+    CONSTRAINT chunks_embedding_model_check
+        CHECK (
+            (embedding IS NULL) = (embedding_model IS NULL)
+        ),
+    CONSTRAINT chunks_chunk_index_check
+        CHECK (chunk_index >= 0)
 );
