@@ -2,8 +2,10 @@ import math
 
 import ollama
 
+EMBEDDING_MODEL = "qwen3-embedding:0.6b"
 
-def generate_embeddings(chunk: str, model="qwen3-embedding:0.6b"):
+
+def generate_embeddings(chunk: str, model=EMBEDDING_MODEL):
     return ollama.embed(model=model, input=chunk)["embeddings"][0]
 
 

@@ -1,8 +1,9 @@
 import re
 from copy import copy
 from dataclasses import dataclass
+import psycopg
 
-from rag.embeddings import generate_embeddings, get_cosine_similarity
+from rag.embeddings import generate_embeddings, get_cosine_similarity, EMBEDDING_MODEL
 
 # from embeddings import bengaluru_text_list, bengaluru_eval_ds
 
@@ -13,7 +14,7 @@ from rag.embeddings import generate_embeddings, get_cosine_similarity
 
 @dataclass
 class RetrievalResult:
-    chunk_id: int
+    chunk_id: str
     text: str
     score: float
 
@@ -142,3 +143,41 @@ def rerank(
         new_candidate.score = relevance
         results.append(new_candidate)
     return sorted(results, key=lambda x: x.score, reverse=True)[:k]
+
+
+def retrieve_chunks_by_vector(
+    conn: psycopg.Connection,
+    query_embedding: list[float],
+    embedding_model: str,
+    k: int = 3,
+) -> list[RetrievalResult]:
+    if len(query_embedding) != 1024:
+        raise ValueError("Query embedding must have 1024 dimensions")
+
+    if not embedding_model.strip():
+        raise ValueError("Embedding model cannot be empty")
+
+    if k <= 0:
+        raise ValueError("k must be greater than zero")
+
+    db_query = """
+        SELECT 
+            chunk_id, 
+            text, 
+            1 - (embedding <=> %s::vector) as score
+        FROM chunks
+        WHERE embedding IS NOT NULL
+            AND embedding_model = %s
+        ORDER BY (embedding <=> %s::vector) ASC
+        LIMIT %s;"""
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            db_query, (str(query_embedding), embedding_model, str(query_embedding), k)
+        )
+        rows = cursor.fetchall()
+
+    results = [
+        RetrievalResult(chunk_id=row[0], text=row[1], score=row[2]) for row in rows
+    ]
+    return results
