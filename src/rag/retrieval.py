@@ -19,17 +19,25 @@ class RetrievalResult:
     score: float
 
 
+def rank_chunks_by_vector(
+    query_embedding: list[float],
+    chunks: list[dict],
+    k: int = 3,
+) -> list[RetrievalResult]:
+    results = []
+    for chunk in chunks:
+        sim = get_cosine_similarity(query_embedding, chunk["embedding"])
+        results.append(RetrievalResult(chunk["id"], chunk["text"], sim))
+    top_k = sorted(results, key=lambda x: x.score, reverse=True)[:k]
+    return top_k
+
+
 def retrieve(query, chunks, k=3) -> list[RetrievalResult]:
     """
     chunks = [{"text": "I'm just a poor boy", "embedding": [0.12, 0.34, 0.56...]}]
     """
-    query_embed = generate_embeddings(query)
-    results = []
-    for chunk in chunks:
-        sim = get_cosine_similarity(query_embed, chunk["embedding"])
-        results.append(RetrievalResult(chunk["id"], chunk["text"], sim))
-    top_k = sorted(results, key=lambda x: x.score, reverse=True)[:k]
-    return top_k
+    query_embedding = generate_embeddings(query)
+    return rank_chunks_by_vector(query_embedding, chunks, k)
 
 
 # ________________________________________________________________________________________
@@ -150,6 +158,7 @@ def retrieve_chunks_by_vector(
     query_embedding: list[float],
     embedding_model: str,
     k: int = 3,
+    document_id: str | None = None,
 ) -> list[RetrievalResult]:
     if len(query_embedding) != 1024:
         raise ValueError("Query embedding must have 1024 dimensions")
@@ -161,20 +170,27 @@ def retrieve_chunks_by_vector(
         raise ValueError("k must be greater than zero")
 
     db_query = """
-        SELECT 
-            chunk_id, 
-            text, 
-            1 - (embedding <=> %s::vector) as score
+        SELECT
+            chunk_id,
+            text,
+            1 - (embedding <=> %s::vector) AS score
         FROM chunks
         WHERE embedding IS NOT NULL
             AND embedding_model = %s
-        ORDER BY (embedding <=> %s::vector) ASC
-        LIMIT %s;"""
+    """
+    params = [str(query_embedding), embedding_model]
+
+    if document_id is not None:
+        db_query += " AND document_id = %s"
+        params.append(document_id)
+    db_query += """
+        ORDER BY embedding <=> %s::vector ASC
+        LIMIT %s
+    """
+    params.extend([str(query_embedding), k])
 
     with conn.cursor() as cursor:
-        cursor.execute(
-            db_query, (str(query_embedding), embedding_model, str(query_embedding), k)
-        )
+        cursor.execute(db_query, params)
         rows = cursor.fetchall()
 
     results = [

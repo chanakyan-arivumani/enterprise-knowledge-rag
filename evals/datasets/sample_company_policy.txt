@@ -1,0 +1,11 @@
+Employees can work remotely up to three days per week. Remote work schedules require approval from the employee's manager.
+
+The annual learning allowance is INR 30000 per employee. It can be used for approved courses, books, and professional certifications.
+
+Travel expense claims must be submitted within 15 days of returning. Each claim must include itemized receipts and the relevant project code.
+
+Production database access requires approval from the security team. Temporary access expires automatically after eight hours.
+
+Customer data backups run every six hours. Backups are retained for 30 days in a separate storage location.
+
+Lost company laptops must be reported to the IT team within one hour of discovery. The IT team will revoke active sessions and initiate a remote wipe.
