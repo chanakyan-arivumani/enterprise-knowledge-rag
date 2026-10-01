@@ -1,6 +1,8 @@
 import ollama
 import re
 from textwrap import dedent
+from rag.retrieval import RetrievalResult
+
 
 LARGE_MODEL = "qwen3.5:9b"
 SMALL_MODEL = "qwen3.5:0.8b"
@@ -145,3 +147,25 @@ def evaluate_generation_result(evaluation_item: dict, generated_answer: str) -> 
         "answer_correct": True,
         "grounded": True,
     }
+
+
+def build_cited_context(
+    results: list[RetrievalResult],
+) -> tuple[str, dict[int, str]]:
+    """Return evidence text and a citation-label-to-chunk-ID mapping.
+    Chunk 1
+    The annual learning allowance is INR 30000 per employee.
+
+    Chunk 2
+    Employees can work remotely up to three days per week.
+
+    {
+    1: "stored-chunk-id-for-learning-allowance",
+    2: "stored-chunk-id-for-remote-work",
+    }
+    """
+    context = "\n\n".join(
+        f"Chunk {idx}\n{item.text}" for idx, item in enumerate(results, start=1)
+    )
+    citation_map = {idx: item.chunk_id for idx, item in enumerate(results, start=1)}
+    return context, citation_map

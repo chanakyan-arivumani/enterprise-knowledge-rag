@@ -4,7 +4,9 @@ from rag.generation import (
     extract_citations,
     evaluate_citations,
     evaluate_generation_result,
+    build_cited_context,
 )
+from rag.retrieval import RetrievalResult
 from tests.mock.mock_generation_result import (
     mixed_result,
     all_answerable_result,
@@ -114,3 +116,32 @@ def test_evaluate_generation_result():
     result = evaluate_generation_result(evaluation_item, generated_answer)
     assert result["citation_present"] == False
     assert result["citation_correct"] == None
+
+
+def test_cited_context_resolves_citation_to_stored_chunk():
+    results = [
+        RetrievalResult(
+            chunk_id="chunk-z",
+            text="The learning allowance is INR 30000.",
+            score=0.9,
+        ),
+        RetrievalResult(
+            chunk_id="chunk-a",
+            text="Remote work is allowed three days per week.",
+            score=0.8,
+        ),
+    ]
+
+    context, citation_map = build_cited_context(results)
+
+    assert "Chunk 2\nRemote work is allowed three days per week." in context
+
+    answer = "Employees may work remotely three days per week. [Chunk 2]"
+    cited_labels = extract_citations(answer)
+    cited_chunk_ids = {citation_map[label] for label in cited_labels}
+
+    assert cited_chunk_ids == {"chunk-a"}
+
+
+def test_build_cited_context_empty_results():
+    assert build_cited_context([]) == ("", {})
