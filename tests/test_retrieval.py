@@ -76,6 +76,8 @@ def test_retrieve_chunks_by_vector_ranks_chunks(db_conn):
     results = retrieve_chunks_by_vector(db_conn, query_embedding, "test-model", 2)
     assert [result.chunk_id for result in results] == ["chunk-a", "chunk-b"]
     assert [result.score for result in results] == pytest.approx([1.0, 0.6])
+    assert results[0].document_id == original_document.document_id
+    assert results[0].source == original_document.source
 
 
 def test_retrieve_chunks_by_vector_filters_ineligible_chunks(db_conn):
@@ -136,6 +138,8 @@ def test_retrieve_chunks_by_vector_filters_ineligible_chunks(db_conn):
 
     assert [result.chunk_id for result in results] == ["chunk-valid"]
     assert results[0].score == pytest.approx(0.6)
+    assert results[0].document_id == original_document.document_id
+    assert results[0].source == original_document.source
 
     results = retrieve_chunks_by_vector(
         db_conn,

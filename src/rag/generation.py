@@ -2,10 +2,11 @@ import ollama
 import re
 from textwrap import dedent
 from rag.retrieval import RetrievalResult
-
+from rag.models import Citation
 
 LARGE_MODEL = "qwen3.5:9b"
 SMALL_MODEL = "qwen3.5:0.8b"
+REFUSAL_ANSWER = "I don't know based on the provided context."
 
 
 def generate_answer(query: str, context: str) -> str:
@@ -169,3 +170,42 @@ def build_cited_context(
     )
     citation_map = {idx: item.chunk_id for idx, item in enumerate(results, start=1)}
     return context, citation_map
+
+
+class CitationValidationError(RuntimeError):
+    """The generated answer contains invalid citation references."""
+
+
+def validate_citation_labels(
+    answer: str,
+    citation_map: dict[int, str],
+) -> set[int]:
+    citations_present = extract_citations(answer)
+    available_citations = set(citation_map.keys())
+    invalid_citations = citations_present - available_citations
+    if invalid_citations:
+        raise CitationValidationError(
+            f"Unknown citation labels: {sorted(invalid_citations)}"
+        )
+    return citations_present
+
+
+def build_citations(
+    results: list[RetrievalResult],
+    citation_map: dict[int, str],
+    cited_labels: set[int],
+) -> list[Citation]:
+    chunk_id_to_result = {result.chunk_id: result for result in results}
+    citations = []
+    for cited_label in sorted(cited_labels):
+        chunk_id = citation_map[cited_label]
+        result = chunk_id_to_result[chunk_id]
+        citation = Citation(
+            label=cited_label,
+            chunk_id=chunk_id,
+            document_id=result.document_id,
+            source=result.source,
+            excerpt=result.text,
+        )
+        citations.append(citation)
+    return citations

@@ -1,11 +1,16 @@
 import pytest
+import pydantic
 from rag.generation import (
     calculate_generation_metrics,
     extract_citations,
     evaluate_citations,
     evaluate_generation_result,
     build_cited_context,
+    validate_citation_labels,
+    CitationValidationError,
+    build_citations,
 )
+from rag.models import Citation
 from rag.retrieval import RetrievalResult
 from tests.mock.mock_generation_result import (
     mixed_result,
@@ -145,3 +150,97 @@ def test_cited_context_resolves_citation_to_stored_chunk():
 
 def test_build_cited_context_empty_results():
     assert build_cited_context([]) == ("", {})
+
+
+def test_validate_citation_labels():
+    answer = "Chunk 1 test"
+    citation_map = {1: "test1", 2: "test2", 3: "test3"}
+    assert validate_citation_labels(answer, citation_map) == {1}
+
+
+def test_citation_validation_error():
+    answer = "Chunk 1 test\nChunk 9 test"
+    citation_map = {1: "test1", 2: "test2", 3: "test3"}
+    with pytest.raises(CitationValidationError):
+        validate_citation_labels(answer, citation_map)
+
+
+def test_validate_nil_citations():
+    answer = "test"
+    citation_map = {1: "test1", 2: "test2", 3: "test3"}
+    assert validate_citation_labels(answer, citation_map) == set()
+
+
+def test_build_citations_without_cited_labels():
+    results = [
+        RetrievalResult(
+            chunk_id="chunk-z",
+            text="The learning allowance is INR 30000.",
+            score=0.9,
+        ),
+    ]
+    citation_map = {1: "test1", 2: "test2"}
+    assert build_citations(results, citation_map, set()) == []
+
+
+def test_build_citations_raises_exceptions():
+    results = [
+        RetrievalResult(
+            chunk_id="chunk-z",
+            text="The learning allowance is INR 30000.",
+            score=0.9,
+        ),
+    ]
+    citation_map = {1: "chunk-z", 2: "chunk-y"}
+    cited_labels = {1}
+    with pytest.raises(pydantic.ValidationError):
+        build_citations(results, citation_map, cited_labels)
+
+
+def test_build_citations():
+    results = [
+        RetrievalResult(
+            chunk_id="chunk-a",
+            text="The learning allowance is INR 30000.",
+            score=0.9,
+            document_id="Document_001",
+            source="/temp/learning.txt",
+        ),
+        RetrievalResult(
+            chunk_id="chunk-b",
+            text="Remote work is allowed three days per week.",
+            score=0.8,
+            document_id="Document_002",
+            source="/temp/remote_work.txt",
+        ),
+        RetrievalResult(
+            chunk_id="chunk-c",
+            text="Travel claims must be submitted within 15 days.",
+            score=0.7,
+            document_id="Document_003",
+            source="/temp/travel.txt",
+        ),
+    ]
+
+    # Deliberately map labels differently from the results' positions.
+    citation_map = {1: "chunk-c", 2: "chunk-b", 3: "chunk-a"}
+    cited_labels = {3, 1}
+
+    citations = build_citations(results, citation_map, cited_labels)
+
+    assert citations == [
+        Citation(
+            label=1,
+            chunk_id="chunk-c",
+            document_id="Document_003",
+            source="/temp/travel.txt",
+            excerpt="Travel claims must be submitted within 15 days.",
+        ),
+        Citation(
+            label=3,
+            chunk_id="chunk-a",
+            document_id="Document_001",
+            source="/temp/learning.txt",
+            excerpt="The learning allowance is INR 30000.",
+        ),
+    ]

@@ -17,6 +17,8 @@ class RetrievalResult:
     chunk_id: str
     text: str
     score: float
+    document_id: str | None = None
+    source: str | None = None
 
 
 def rank_chunks_by_vector(
@@ -171,20 +173,23 @@ def retrieve_chunks_by_vector(
 
     db_query = """
         SELECT
-            chunk_id,
-            text,
-            1 - (embedding <=> %s::vector) AS score
-        FROM chunks
-        WHERE embedding IS NOT NULL
-            AND embedding_model = %s
+            c.chunk_id,
+            c.text,
+            1 - (c.embedding <=> %s::vector) AS score,
+            c.document_id,
+            d.source
+        FROM chunks as c
+        JOIN documents as d ON c.document_id = d.document_id
+        WHERE c.embedding IS NOT NULL
+            AND c.embedding_model = %s
     """
     params = [str(query_embedding), embedding_model]
 
     if document_id is not None:
-        db_query += " AND document_id = %s"
+        db_query += " AND c.document_id = %s"
         params.append(document_id)
     db_query += """
-        ORDER BY embedding <=> %s::vector ASC
+        ORDER BY c.embedding <=> %s::vector ASC
         LIMIT %s
     """
     params.extend([str(query_embedding), k])
@@ -194,6 +199,13 @@ def retrieve_chunks_by_vector(
         rows = cursor.fetchall()
 
     results = [
-        RetrievalResult(chunk_id=row[0], text=row[1], score=row[2]) for row in rows
+        RetrievalResult(
+            chunk_id=row[0],
+            text=row[1],
+            score=row[2],
+            document_id=row[3],
+            source=row[4],
+        )
+        for row in rows
     ]
     return results

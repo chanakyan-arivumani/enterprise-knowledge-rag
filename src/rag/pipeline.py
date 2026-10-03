@@ -1,14 +1,22 @@
 import psycopg
 from rag.embeddings import generate_embeddings, EMBEDDING_MODEL
+from rag.models import Citation
 from rag.retrieval import retrieve_chunks_by_vector
-from rag.generation import build_cited_context, generate_answer
+from rag.generation import (
+    build_cited_context,
+    generate_answer,
+    validate_citation_labels,
+    build_citations,
+    REFUSAL_ANSWER,
+    CitationValidationError,
+)
 
 
 def answer_question(
     conn: psycopg.Connection,
     query: str,
     k: int = 3,
-) -> tuple[str, dict[int, str]]:
+) -> tuple[str, list[Citation]]:
     if not query.strip():
         raise ValueError("Query can't be empty")
 
@@ -22,7 +30,14 @@ def answer_question(
         k=k,
     )
     if not results:
-        return ("I don't know based on the provided context.", {})
+        return REFUSAL_ANSWER, []
     context, citation_map = build_cited_context(results)
     answer = generate_answer(query, context)
-    return answer, citation_map
+
+    cited_labels = validate_citation_labels(answer, citation_map)
+
+    if not cited_labels and answer.strip() != REFUSAL_ANSWER:
+        raise CitationValidationError("Generated answer is missing citations")
+
+    citations = build_citations(results, citation_map, cited_labels)
+    return answer, citations

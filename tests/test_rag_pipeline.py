@@ -2,6 +2,7 @@ import psycopg
 import pytest
 from src.rag import pipeline as rag_pipeline
 from rag.retrieval import RetrievalResult
+from rag.generation import REFUSAL_ANSWER, CitationValidationError
 
 
 @pytest.mark.parametrize(
@@ -57,7 +58,7 @@ def test_empty_retrieval_skips_generation(monkeypatch):
     )
 
     assert answer == "I don't know based on the provided context."
-    assert citation_map == {}
+    assert citation_map == []
 
 
 def test_database_failure_propagates(monkeypatch):
@@ -142,3 +143,60 @@ def test_generation_failure_propagates(monkeypatch):
             conn=object(),
             query="What is the learning allowance?",
         )
+
+
+@pytest.mark.parametrize(
+    ("generated_answer", "should_raise", "expected_labels"),
+    [
+        ("The allowance is INR 30000. (Chunk 1)", False, [1]),
+        ("The allowance is INR 30000. (Chunk 1) (Chunk 99)", True, []),
+        ("The allowance is INR 30000.", True, []),
+        (REFUSAL_ANSWER, False, []),
+    ],
+    ids=["valid", "unknown-label", "missing-citation", "refusal"],
+)
+def test_pipeline_citation_policy(
+    monkeypatch,
+    generated_answer,
+    should_raise,
+    expected_labels,
+):
+    result = RetrievalResult(
+        chunk_id="chunk-1",
+        text="The annual learning allowance is INR 30000.",
+        score=0.9,
+        document_id="doc-1",
+        source="policy.txt",
+    )
+
+    monkeypatch.setattr(
+        rag_pipeline,
+        "generate_embeddings",
+        lambda *args, **kwargs: [0.1, 0.2],
+    )
+    monkeypatch.setattr(
+        rag_pipeline,
+        "retrieve_chunks_by_vector",
+        lambda *args, **kwargs: [result],
+    )
+    monkeypatch.setattr(
+        rag_pipeline,
+        "generate_answer",
+        lambda *args, **kwargs: generated_answer,
+    )
+
+    if should_raise:
+        with pytest.raises(CitationValidationError):
+            rag_pipeline.answer_question(
+                conn=object(),
+                query="What is the learning allowance?",
+            )
+        return
+
+    answer, citations = rag_pipeline.answer_question(
+        conn=object(),
+        query="What is the learning allowance?",
+    )
+
+    assert answer == generated_answer
+    assert [citation.label for citation in citations] == expected_labels
