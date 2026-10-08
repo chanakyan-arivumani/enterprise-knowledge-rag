@@ -17,10 +17,19 @@ def generate_answer(query: str, context: str) -> str:
 
     Use only the provided context.
 
-    If the answer is not present in the context, respond exactly:
-    I don't know based on the provided context.
+    Apply the first matching rule:
 
-    If the answer is present, cite the chunk that contains the answer.
+    1. If relevant chunks give conflicting answers and the context does not
+       establish which statement applies, explain the disagreement.
+       Cite each conflicting statement using (Chunk N).
+       State that the applicable answer cannot be determined from the context.
+
+    2. If the context supports an answer, answer directly.
+       Cite the supporting chunks using (Chunk N).
+
+    3. If the requested information is missing from the context, respond exactly:
+       I don't know based on the provided context.
+       Include no citations in this response.
 
     Context:
     {context}
