@@ -1,8 +1,12 @@
 import pymupdf
-
+import pytest
 from ingestion.identity import generate_document_id, generate_content_hash
 from ingestion.models import Chunk
-from ingestion.pipeline import ingest_file, ingest_directory
+from ingestion.pipeline import ingest_file, ingest_directory, ingest_file_to_db
+from src.rag import pipeline as rag_pipeline
+from rag.embeddings import EMBEDDING_MODEL
+import ingestion.pipeline as ingestion_pipeline
+from persistence.repository import get_document, get_chunks
 
 
 def test_ingest_file_with_temporary_text_file(tmp_path):
@@ -76,3 +80,69 @@ def test_ingest_files_in_directory(tmp_path):
         str(file_1_path),
         str(file_2_path),
     }
+
+
+def test_ingest_file_to_db_rolls_back_failed_update(db_conn, tmp_path, monkeypatch):
+    file_path = tmp_path / "document_1.txt"
+    file_path.write_text(
+        "\ufeff\r\nFirst sentence. Second sentence.  \r\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        ingestion_pipeline,
+        "generate_embeddings",
+        lambda *args, **kwargs: [0.2] * 1024,
+    )
+
+    ingest_file_to_db(
+        conn=db_conn,
+        path=file_path,
+        chunk_size=1,
+        overlap=0,
+        embedding_model=EMBEDDING_MODEL,
+    )
+
+    real_update = ingestion_pipeline.update_chunk_embedding
+
+    document_id = generate_document_id(str(file_path))
+    original_document = get_document(db_conn, document_id)
+    original_chunks = get_chunks(db_conn, document_id)
+    assert original_document.document_id == document_id
+    assert original_chunks[0].text == "First sentence."
+    assert original_chunks[1].text == "Second sentence."
+
+    file_path.write_text(
+        "\ufeff\r\nNew first sentence. New second sentence.  \r\n",
+        encoding="utf-8",
+    )
+
+    write_calls = 0
+
+    def fail_second_write(*args, **kwargs):
+        nonlocal write_calls
+        write_calls += 1
+
+        if write_calls == 2:
+            raise RuntimeError("Simulated embedding write failure")
+
+        return real_update(*args, **kwargs)
+
+    monkeypatch.setattr(
+        ingestion_pipeline,
+        "update_chunk_embedding",
+        fail_second_write,
+    )
+    with pytest.raises(
+        RuntimeError,
+        match="Simulated embedding write failure",
+    ):
+        ingest_file_to_db(
+            conn=db_conn,
+            path=file_path,
+            chunk_size=1,
+            overlap=0,
+            embedding_model=EMBEDDING_MODEL,
+        )
+    assert write_calls == 2
+    assert get_document(db_conn, document_id) == original_document
+    assert get_chunks(db_conn, document_id) == original_chunks
