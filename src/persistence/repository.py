@@ -195,27 +195,3 @@ def update_chunk_embedding(
 
         if cursor.rowcount == 0:
             raise ValueError(f"Chunk {chunk_id} not found")
-
-
-@pytest.mark.parametrize(
-    "embedding, embedding_model, expected_error",
-    [
-        ([0.1] * 1023, "qwen3-embedding:0.6b", "1024"),
-        ([0.1] * 1025, "qwen3-embedding:0.6b", "1024"),
-        ([0.1] * 1024, "", "model"),
-        ([0.1] * 1024, "   ", "model"),
-    ],
-)
-def test_update_chunk_embedding_invalid_input(
-    db_conn,
-    embedding,
-    embedding_model,
-    expected_error,
-):
-    with pytest.raises(ValueError, match=expected_error):
-        update_chunk_embedding(
-            db_conn,
-            chunk_id="unused-chunk",
-            embedding=embedding,
-            embedding_model=embedding_model,
-        )

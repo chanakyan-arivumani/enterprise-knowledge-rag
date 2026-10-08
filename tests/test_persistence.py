@@ -175,6 +175,49 @@ def test_persist_new_document(db_conn):
     assert chunks == chunks_from_db
 
 
+def test_persist_rechunks_unchanged_document(db_conn):
+    document = Document(
+        document_id="doc-123",
+        source="/test/doc.txt",
+        document_type="text",
+        content_hash="hash-123",
+        text="A. B.",
+        metadata={"path": "/test/doc.txt"},
+    )
+    chunks = [
+        Chunk(
+            chunk_id="chunk-1",
+            document_id=document.document_id,
+            chunk_index=0,
+            text="A.",
+            metadata={"sentence_ids": [1]},
+        ),
+        Chunk(
+            chunk_id="chunk-2",
+            document_id=document.document_id,
+            chunk_index=1,
+            text="B.",
+            metadata={"sentence_ids": [2]},
+        ),
+    ]
+    persist_document(db_conn, document, chunks)
+
+    replacement_chunk = Chunk(
+        chunk_id="chunk-replacement",
+        document_id=document.document_id,
+        chunk_index=0,
+        text=document.text,
+        metadata={},
+    )
+
+    # Same document ID and content hash, but different chunking.
+    persist_document(db_conn, document, [replacement_chunk])
+
+    stored_chunks = get_chunks(db_conn, document.document_id)
+
+    assert stored_chunks == [replacement_chunk]
+
+
 def test_persist_unchanged_document(db_conn):
     original_document = Document(
         document_id="doc-123",
