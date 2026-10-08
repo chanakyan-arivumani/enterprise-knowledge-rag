@@ -137,7 +137,7 @@ def test_cited_context_resolves_citation_to_stored_chunk():
         ),
     ]
 
-    context, citation_map = build_cited_context(results)
+    context, citation_map = build_cited_context(results, max_context_chars=100)
 
     assert "Chunk 2\nRemote work is allowed three days per week." in context
 
@@ -146,10 +146,6 @@ def test_cited_context_resolves_citation_to_stored_chunk():
     cited_chunk_ids = {citation_map[label] for label in cited_labels}
 
     assert cited_chunk_ids == {"chunk-a"}
-
-
-def test_build_cited_context_empty_results():
-    assert build_cited_context([]) == ("", {})
 
 
 def test_validate_citation_labels():
@@ -244,3 +240,105 @@ def test_build_citations():
             excerpt="The learning allowance is INR 30000.",
         ),
     ]
+
+
+def test_build_cited_context_exact_fit():
+    results = [
+        RetrievalResult(
+            chunk_id="chunk-a",
+            text="Alpha.",
+            score=0.9,
+            document_id="Document_001",
+            source="/temp/learning.txt",
+        ),
+        RetrievalResult(
+            chunk_id="chunk-b",
+            text="Beta.",
+            score=0.8,
+            document_id="Document_002",
+            source="/temp/remote_work.txt",
+        ),
+    ]
+    expected_context = "Chunk 1\nAlpha.\n\nChunk 2\nBeta."
+    context, citation_map = build_cited_context(
+        results,
+        max_context_chars=len(expected_context),
+    )
+    assert context == expected_context
+    assert citation_map == {1: "chunk-a", 2: "chunk-b"}
+    assert len(context) == len(expected_context)
+
+
+def test_build_cited_context_skips_chunk_that_does_not_fit():
+    results = [
+        RetrievalResult(
+            chunk_id="chunk-a",
+            text="Alpha.",
+            score=0.9,
+            document_id="Document_001",
+            source="/temp/learning.txt",
+        ),
+        RetrievalResult(
+            chunk_id="chunk-b",
+            text="B" * 10,
+            score=0.8,
+            document_id="Document_002",
+            source="/temp/remote_work.txt",
+        ),
+        RetrievalResult(
+            chunk_id="chunk-c",
+            text="Gamma.",
+            score=0.7,
+            document_id="Document_003",
+            source="/temp/travel.txt",
+        ),
+    ]
+    expected_context = "Chunk 1\nAlpha.\n\nChunk 2\nGamma."
+    budget = len(expected_context)
+
+    context, citation_map = build_cited_context(
+        results,
+        max_context_chars=budget,
+    )
+
+    assert context == expected_context
+    assert citation_map == {1: "chunk-a", 2: "chunk-c"}
+    assert len(context) <= budget
+
+
+@pytest.mark.parametrize(
+    "budget",
+    [0, -1],
+)
+def test_build_cited_context_rejects_invalid_budget(budget: int) -> None:
+    with pytest.raises(ValueError):
+        build_cited_context(
+            [],
+            max_context_chars=budget,
+        )
+
+
+@pytest.mark.parametrize(
+    "results,budget",
+    [
+        ([], 10),
+        (
+            [
+                RetrievalResult(
+                    chunk_id="chunk-a",
+                    document_id="doc-a",
+                    source="test.txt",
+                    text="Alpha.",
+                    score=0.9,
+                )
+            ],
+            13,
+        ),
+    ],
+)
+def test_build_cited_context_returns_empty(
+    results: list[RetrievalResult], budget: int
+) -> None:
+    context, citation_map = build_cited_context(results, max_context_chars=budget)
+    assert context == ""
+    assert citation_map == {}

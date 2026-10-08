@@ -9,6 +9,7 @@ from rag.generation import (
     build_citations,
     REFUSAL_ANSWER,
     CitationValidationError,
+    ContextBudgetError,
 )
 
 
@@ -16,12 +17,17 @@ def answer_question(
     conn: psycopg.Connection,
     query: str,
     k: int = 3,
+    *,
+    max_context_chars: int,
 ) -> tuple[str, list[Citation]]:
     if not query.strip():
         raise ValueError("Query can't be empty")
 
     if k <= 0:
         raise ValueError("k must be greater than zero")
+    if max_context_chars <= 0:
+        raise ValueError("max_context_chars must be greater than zero")
+
     query_embedding = generate_embeddings(query, EMBEDDING_MODEL)
     results = retrieve_chunks_by_vector(
         conn,
@@ -31,7 +37,11 @@ def answer_question(
     )
     if not results:
         return REFUSAL_ANSWER, []
-    context, citation_map = build_cited_context(results)
+    context, citation_map = build_cited_context(
+        results, max_context_chars=max_context_chars
+    )
+    if not context:
+        raise ContextBudgetError("No retrieved chunk fits within max_context_chars")
     answer = generate_answer(query, context)
 
     cited_labels = validate_citation_labels(answer, citation_map)

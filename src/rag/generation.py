@@ -152,6 +152,8 @@ def evaluate_generation_result(evaluation_item: dict, generated_answer: str) -> 
 
 def build_cited_context(
     results: list[RetrievalResult],
+    *,
+    max_context_chars: int,
 ) -> tuple[str, dict[int, str]]:
     """Return evidence text and a citation-label-to-chunk-ID mapping.
     Chunk 1
@@ -165,15 +167,31 @@ def build_cited_context(
     2: "stored-chunk-id-for-remote-work",
     }
     """
-    context = "\n\n".join(
-        f"Chunk {idx}\n{item.text}" for idx, item in enumerate(results, start=1)
-    )
-    citation_map = {idx: item.chunk_id for idx, item in enumerate(results, start=1)}
+    if max_context_chars <= 0:
+        raise ValueError("max_context_chars must be greater than zero")
+    accepted_blocks = []
+    char_count = 0
+    citation_map = {}
+    idx = 1
+
+    for item in results:
+        block = f"Chunk {idx}\n{item.text}"
+        additional_chars = len(block) + (2 if accepted_blocks else 0)
+        if char_count + additional_chars <= max_context_chars:
+            accepted_blocks.append(block)
+            citation_map[idx] = item.chunk_id
+            char_count += additional_chars
+            idx += 1
+    context = "\n\n".join(accepted_blocks)
     return context, citation_map
 
 
 class CitationValidationError(RuntimeError):
     """The generated answer contains invalid citation references."""
+
+
+class ContextBudgetError(RuntimeError):
+    """No retrieved evidence fits within the configured context budget."""
 
 
 def validate_citation_labels(

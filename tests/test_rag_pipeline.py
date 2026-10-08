@@ -1,8 +1,9 @@
 import psycopg
 import pytest
+from unittest.mock import Mock
 from src.rag import pipeline as rag_pipeline
 from rag.retrieval import RetrievalResult
-from rag.generation import REFUSAL_ANSWER, CitationValidationError
+from rag.generation import REFUSAL_ANSWER, CitationValidationError, ContextBudgetError
 
 
 @pytest.mark.parametrize(
@@ -27,6 +28,7 @@ def test_invalid_inputs_fail_before_dependencies(monkeypatch, query, k):
             conn=object(),
             query=query,
             k=k,
+            max_context_chars=10,
         )
 
 
@@ -55,6 +57,7 @@ def test_empty_retrieval_skips_generation(monkeypatch):
         conn=object(),
         query="What is the learning allowance?",
         k=3,
+        max_context_chars=50,
     )
 
     assert answer == "I don't know based on the provided context."
@@ -92,6 +95,7 @@ def test_database_failure_propagates(monkeypatch):
         rag_pipeline.answer_question(
             conn=object(),
             query="What is the learning allowance?",
+            max_context_chars=50,
         )
 
 
@@ -110,6 +114,7 @@ def test_embedding_failure_propagates(monkeypatch):
         rag_pipeline.answer_question(
             conn=object(),
             query="What is the learning allowance?",
+            max_context_chars=50,
         )
 
 
@@ -142,6 +147,7 @@ def test_generation_failure_propagates(monkeypatch):
         rag_pipeline.answer_question(
             conn=object(),
             query="What is the learning allowance?",
+            max_context_chars=100,
         )
 
 
@@ -190,13 +196,53 @@ def test_pipeline_citation_policy(
             rag_pipeline.answer_question(
                 conn=object(),
                 query="What is the learning allowance?",
+                max_context_chars=100,
             )
         return
 
     answer, citations = rag_pipeline.answer_question(
         conn=object(),
         query="What is the learning allowance?",
+        max_context_chars=100,
     )
 
     assert answer == generated_answer
     assert [citation.label for citation in citations] == expected_labels
+
+
+def test_answer_question_raises_when_no_context_fits(monkeypatch):
+    results = [
+        RetrievalResult(
+            chunk_id="chunk-a",
+            document_id="doc-a",
+            source="test.txt",
+            text="Alpha.",
+            score=0.9,
+        )
+    ]
+
+    monkeypatch.setattr(
+        rag_pipeline,
+        "generate_embeddings",
+        lambda *args, **kwargs: [0.1, 0.2],
+    )
+    monkeypatch.setattr(
+        rag_pipeline,
+        "retrieve_chunks_by_vector",
+        lambda *args, **kwargs: results,
+    )
+    generate_answer_mock = Mock()
+
+    monkeypatch.setattr(
+        rag_pipeline,
+        "generate_answer",
+        generate_answer_mock,
+    )
+    with pytest.raises(ContextBudgetError):
+        rag_pipeline.answer_question(
+            conn=object(),
+            query="What does the document say?",
+            max_context_chars=13,
+        )
+
+    generate_answer_mock.assert_not_called()
