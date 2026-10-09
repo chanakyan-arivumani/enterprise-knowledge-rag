@@ -173,3 +173,59 @@ def test_update_chunk_embedding_invalid_input(
             embedding=embedding,
             embedding_model=embedding_model,
         )
+
+
+@pytest.mark.parametrize(
+    "embedding, embedding_model, expected_error",
+    [
+        (
+            [float("nan")] + [0.2] * 1023,
+            "qwen3-embedding:0.6b",
+            "Embedding values must be finite",
+        ),
+        (
+            [float("inf")] + [0.2] * 1023,
+            "qwen3-embedding:0.6b",
+            "Embedding values must be finite",
+        ),
+        (
+            [float("-inf")] + [0.2] * 1023,
+            "qwen3-embedding:0.6b",
+            "Embedding values must be finite",
+        ),
+        ([0.0] * 1024, "qwen3-embedding:0.6b", "Embedding must not be a zero vector"),
+    ],
+)
+def test_update_chunk_embedding_rejects_invalid_values(
+    db_conn,
+    embedding,
+    embedding_model,
+    expected_error,
+):
+    original_document = Document(
+        document_id="doc-123",
+        source="/test/doc.txt",
+        document_type="text",
+        content_hash="hash-123",
+        text="A. B. C.",
+        metadata={"version": 1},
+    )
+
+    chunks = [
+        Chunk(
+            chunk_id="chunk-valid",
+            document_id=original_document.document_id,
+            chunk_index=2,
+            text="C.",
+            metadata={"sentence_ids": [3]},
+        )
+    ]
+    persist_document(db_conn, original_document, chunks)
+
+    with pytest.raises(ValueError, match=expected_error):
+        update_chunk_embedding(
+            db_conn,
+            chunk_id="chunk-valid",
+            embedding=embedding,
+            embedding_model=embedding_model,
+        )

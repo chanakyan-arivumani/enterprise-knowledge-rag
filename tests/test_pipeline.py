@@ -146,3 +146,155 @@ def test_ingest_file_to_db_rolls_back_failed_update(db_conn, tmp_path, monkeypat
     assert write_calls == 2
     assert get_document(db_conn, document_id) == original_document
     assert get_chunks(db_conn, document_id) == original_chunks
+
+
+def test_ingest_file_to_db_rejects_empty_update(db_conn, tmp_path, monkeypatch):
+    file_path = tmp_path / "document_1.txt"
+    file_path.write_text(
+        "\ufeff\r\nFirst sentence. Second sentence.  \r\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        ingestion_pipeline,
+        "generate_embeddings",
+        lambda *args, **kwargs: [0.2] * 1024,
+    )
+
+    ingest_file_to_db(
+        conn=db_conn,
+        path=file_path,
+        chunk_size=1,
+        overlap=0,
+        embedding_model=EMBEDDING_MODEL,
+    )
+    document_id = generate_document_id(str(file_path))
+    original_document = get_document(db_conn, document_id)
+    original_chunks = get_chunks(db_conn, document_id)
+    assert len(original_chunks) == 2
+    assert all(chunk.embedding is not None for chunk in original_chunks)
+    assert all(chunk.embedding_model == EMBEDDING_MODEL for chunk in original_chunks)
+
+    file_path.write_text(" \n\t  \n", encoding="utf-8")
+
+    with pytest.raises(ValueError):
+        ingest_file_to_db(
+            conn=db_conn,
+            path=file_path,
+            chunk_size=1,
+            overlap=0,
+            embedding_model=EMBEDDING_MODEL,
+        )
+
+    assert get_document(db_conn, document_id) == original_document
+    assert get_chunks(db_conn, document_id) == original_chunks
+
+
+def test_ingest_file_to_db_reembeds_when_model_changes(db_conn, tmp_path, monkeypatch):
+    file_path = tmp_path / "document_1.txt"
+    file_path.write_text(
+        "\ufeff\r\nFirst sentence. Second sentence.  \r\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        ingestion_pipeline,
+        "generate_embeddings",
+        lambda *args, **kwargs: [0.2] * 1024,
+    )
+
+    ingest_file_to_db(
+        conn=db_conn,
+        path=file_path,
+        chunk_size=1,
+        overlap=0,
+        embedding_model="model-a",
+    )
+    document_id = generate_document_id(str(file_path))
+    original_document = get_document(db_conn, document_id)
+    original_chunks = get_chunks(db_conn, document_id)
+
+    monkeypatch.setattr(
+        ingestion_pipeline,
+        "generate_embeddings",
+        lambda *args, **kwargs: [0.1] * 1024,
+    )
+    ingest_file_to_db(
+        conn=db_conn,
+        path=file_path,
+        chunk_size=1,
+        overlap=0,
+        embedding_model="model-b",
+    )
+
+    updated_document = get_document(db_conn, document_id)
+    updated_chunks = get_chunks(db_conn, document_id)
+    assert document_id == updated_document.document_id
+
+    for updated_chunk, original_chunk in zip(
+        updated_chunks, original_chunks, strict=True
+    ):
+        assert updated_chunk.chunk_id == original_chunk.chunk_id
+        assert updated_chunk.embedding_model == "model-b"
+        assert updated_chunk.embedding == [0.1] * 1024
+
+
+@pytest.mark.parametrize(
+    ("updated_text", "updated_chunk_size", "expected_chunk_texts"),
+    [
+        pytest.param(
+            "Updated first sentence. Updated second sentence. Third sentence.",
+            1,
+            [
+                "Updated first sentence.",
+                "Updated second sentence.",
+                "Third sentence.",
+            ],
+            id="content_changed",
+        ),
+        pytest.param(
+            "First sentence. Second sentence.",
+            2,
+            [
+                "First sentence. Second sentence.",
+            ],
+            id="chunking_changed",
+        ),
+    ],
+)
+def test_ingest_file_to_db_rebuilds_changed_content_or_chunking(
+    db_conn,
+    tmp_path,
+    monkeypatch,
+    updated_text,
+    updated_chunk_size,
+    expected_chunk_texts,
+):
+    file_path = tmp_path / "document_1.txt"
+    file_path.write_text(
+        "\ufeff\r\nFirst sentence. Second sentence.  \r\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        ingestion_pipeline,
+        "generate_embeddings",
+        lambda *args, **kwargs: [0.2] * 1024,
+    )
+    ingest_file_to_db(
+        conn=db_conn,
+        path=file_path,
+        chunk_size=1,
+        overlap=0,
+        embedding_model="model-a",
+    )
+
+    file_path.write_text(updated_text, encoding="utf-8")
+    ingest_file_to_db(
+        conn=db_conn,
+        path=file_path,
+        chunk_size=updated_chunk_size,
+        overlap=0,
+        embedding_model=EMBEDDING_MODEL,
+    )
+    document_id = generate_document_id(str(file_path))
+    stored_chunks = get_chunks(db_conn, document_id)
+
+    assert [chunk.text for chunk in stored_chunks] == expected_chunk_texts

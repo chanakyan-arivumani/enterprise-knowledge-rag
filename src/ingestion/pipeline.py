@@ -43,6 +43,10 @@ def ingest_file_to_db(
     embedding_model: str,
 ) -> None:
     document = parse_file(path)
+
+    if not document.text.strip():
+        raise ValueError("Document contains no usable text")
+
     chunks = chunk_document(
         document,
         chunk_size=chunk_size,

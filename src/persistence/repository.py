@@ -1,4 +1,5 @@
 import json
+import math
 import pytest
 import psycopg
 from psycopg.types.json import Jsonb
@@ -176,6 +177,12 @@ def update_chunk_embedding(
 
     if not embedding_model.strip():
         raise ValueError("Embedding model cannot be empty")
+
+    if not all(math.isfinite(value) for value in embedding):
+        raise ValueError("Embedding values must be finite")
+
+    if all(value == 0.0 for value in embedding):
+        raise ValueError("Embedding must not be a zero vector")
 
     query = """
         UPDATE chunks
