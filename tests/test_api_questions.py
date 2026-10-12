@@ -1,10 +1,19 @@
 import pytest
+from pydantic import ValidationError
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from src.api import main as entrypoint
 from src.api.dependencies import get_db
 
 app = entrypoint.app
+
+
+@pytest.fixture(autouse=True)
+def configure_test_environment(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/test_rag")
+    monkeypatch.setenv("EMBEDDING_MODEL", "qwen3-embedding:0.6b")
+    monkeypatch.setenv("GENERATION_MODEL", "qwen3.5:9b")
+    monkeypatch.setenv("MAX_CONTEXT_CHARS", "2000")
 
 
 def test_read_main(monkeypatch):
@@ -22,6 +31,9 @@ def test_read_main(monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
 
     try:
+        monkeypatch.setenv("MAX_CONTEXT_CHARS", "3000")
+        monkeypatch.setenv("EMBEDDING_MODEL", "test-embedding-model")
+        monkeypatch.setenv("GENERATION_MODEL", "test-generation-model")
         with TestClient(app) as client:
             response = client.post(
                 "/questions",
@@ -38,7 +50,9 @@ def test_read_main(monkeypatch):
         assert captured["query"] == "What is the learning allowance?"
         assert captured["k"] == 2
         assert captured["document_id"] == "doc-123"
-        assert captured["max_context_chars"] == entrypoint.MAX_CONTEXT_CHARS
+        assert captured["max_context_chars"] == 3000
+        assert captured["embedding_model"] == "test-embedding-model"
+        assert captured["generation_model"] == "test-generation-model"
     finally:
         app.dependency_overrides.pop(get_db, None)
 
@@ -116,3 +130,13 @@ def test_create_question_handles_pipeline_error(
         assert response.json() == {"detail": expected_detail}
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+def test_startup_rejects_missing_database_url(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    with pytest.raises(ValidationError) as exc_info:
+        with TestClient(app):
+            pass
+
+    assert any(error["loc"] == ("database_url",) for error in exc_info.value.errors())

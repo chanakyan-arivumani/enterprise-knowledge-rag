@@ -29,6 +29,8 @@ def test_invalid_inputs_fail_before_dependencies(monkeypatch, query, k):
             query=query,
             k=k,
             max_context_chars=10,
+            embedding_model="qwen3-embedding:0.6b",
+            generation_model="qwen3.5:9b",
         )
 
 
@@ -58,6 +60,8 @@ def test_empty_retrieval_skips_generation(monkeypatch):
         query="What is the learning allowance?",
         k=3,
         max_context_chars=50,
+        embedding_model="qwen3-embedding:0.6b",
+        generation_model="qwen3.5:9b",
     )
 
     assert answer == "I don't know based on the provided context."
@@ -96,6 +100,8 @@ def test_database_failure_propagates(monkeypatch):
             conn=object(),
             query="What is the learning allowance?",
             max_context_chars=50,
+            embedding_model="qwen3-embedding:0.6b",
+            generation_model="qwen3.5:9b",
         )
 
 
@@ -115,6 +121,8 @@ def test_embedding_failure_propagates(monkeypatch):
             conn=object(),
             query="What is the learning allowance?",
             max_context_chars=50,
+            embedding_model="qwen3-embedding:0.6b",
+            generation_model="qwen3.5:9b",
         )
 
 
@@ -148,6 +156,8 @@ def test_generation_failure_propagates(monkeypatch):
             conn=object(),
             query="What is the learning allowance?",
             max_context_chars=100,
+            embedding_model="qwen3-embedding:0.6b",
+            generation_model="qwen3.5:9b",
         )
 
 
@@ -197,6 +207,8 @@ def test_pipeline_citation_policy(
                 conn=object(),
                 query="What is the learning allowance?",
                 max_context_chars=100,
+                embedding_model="qwen3-embedding:0.6b",
+                generation_model="qwen3.5:9b",
             )
         return
 
@@ -204,6 +216,8 @@ def test_pipeline_citation_policy(
         conn=object(),
         query="What is the learning allowance?",
         max_context_chars=100,
+        embedding_model="qwen3-embedding:0.6b",
+        generation_model="qwen3.5:9b",
     )
 
     assert answer == generated_answer
@@ -243,6 +257,8 @@ def test_answer_question_raises_when_no_context_fits(monkeypatch):
             conn=object(),
             query="What does the document say?",
             max_context_chars=13,
+            embedding_model="qwen3-embedding:0.6b",
+            generation_model="qwen3.5:9b",
         )
 
     generate_answer_mock.assert_not_called()

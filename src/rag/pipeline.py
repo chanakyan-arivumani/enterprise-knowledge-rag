@@ -1,5 +1,5 @@
 import psycopg
-from rag.embeddings import generate_embeddings, EMBEDDING_MODEL
+from rag.embeddings import generate_embeddings
 from rag.models import Citation
 from rag.retrieval import retrieve_chunks_by_vector
 from rag.generation import (
@@ -20,6 +20,8 @@ def answer_question(
     document_id: str | None = None,
     *,
     max_context_chars: int,
+    embedding_model: str,
+    generation_model: str,
 ) -> tuple[str, list[Citation]]:
     if not query.strip():
         raise ValueError("Query can't be empty")
@@ -29,11 +31,11 @@ def answer_question(
     if max_context_chars <= 0:
         raise ValueError("max_context_chars must be greater than zero")
 
-    query_embedding = generate_embeddings(query, EMBEDDING_MODEL)
+    query_embedding = generate_embeddings(query, embedding_model)
     results = retrieve_chunks_by_vector(
         conn,
         query_embedding,
-        embedding_model=EMBEDDING_MODEL,
+        embedding_model=embedding_model,
         k=k,
         document_id=document_id,
     )
@@ -44,7 +46,7 @@ def answer_question(
     )
     if not context:
         raise ContextBudgetError("No retrieved chunk fits within max_context_chars")
-    answer = generate_answer(query, context)
+    answer = generate_answer(query=query, context=context, model=generation_model)
 
     cited_labels = validate_citation_labels(answer, citation_map)
 

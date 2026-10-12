@@ -1,22 +1,31 @@
-from typing import Annotated
-
 import psycopg
+
+from typing import Annotated
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException
 
-from src.api.dependencies import get_db
+from src.config import load_settings, Settings
+from src.api.dependencies import get_db, get_settings
 from src.api.schemas import QuestionRequest, QuestionResponse
 from src.rag.pipeline import answer_question
 from src.rag.generation import ContextBudgetError, CitationValidationError
 
-app = FastAPI()
 
-MAX_CONTEXT_CHARS = 2000
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    app.state.settings = load_settings()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/questions", response_model=QuestionResponse)
 def create_question(
     request: QuestionRequest,
     conn: Annotated[psycopg.Connection, Depends(get_db)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> QuestionResponse:
     try:
         answer, citations = answer_question(
@@ -24,7 +33,9 @@ def create_question(
             query=request.query,
             k=request.k,
             document_id=request.document_id,
-            max_context_chars=MAX_CONTEXT_CHARS,
+            max_context_chars=settings.max_context_chars,
+            embedding_model=settings.embedding_model,
+            generation_model=settings.generation_model,
         )
     except ContextBudgetError as exc:
         raise HTTPException(

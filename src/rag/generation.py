@@ -9,7 +9,7 @@ SMALL_MODEL = "qwen3.5:0.8b"
 REFUSAL_ANSWER = "I don't know based on the provided context."
 
 
-def generate_answer(query: str, context: str) -> str:
+def generate_answer(query: str, context: str, *, model: str) -> str:
     prompt = dedent(
         f"""
     Answer the question directly using information from the provided context.
@@ -42,7 +42,7 @@ def generate_answer(query: str, context: str) -> str:
     )
 
     result = ollama.generate(
-        model=LARGE_MODEL,
+        model=model,
         prompt=prompt,
         think=False,
         options={"temperature": 0},
