@@ -17,6 +17,7 @@ def answer_question(
     conn: psycopg.Connection,
     query: str,
     k: int = 3,
+    document_id: str | None = None,
     *,
     max_context_chars: int,
 ) -> tuple[str, list[Citation]]:
@@ -34,6 +35,7 @@ def answer_question(
         query_embedding,
         embedding_model=EMBEDDING_MODEL,
         k=k,
+        document_id=document_id,
     )
     if not results:
         return REFUSAL_ANSWER, []
